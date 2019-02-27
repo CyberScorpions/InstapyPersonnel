@@ -7,23 +7,19 @@ import json
 
 class Instapy(object):
     def __init__(self, *args, **kwargs):
-        self.lat_min = None
-        self.lon_min = None
-        self.lat_max = None
-        self.lon_max = None
-        self.lat_ = None
-        self.lon_ = None
         self.smart_hashtags = None
 
     def location_to_lonlat(self, location):  # Get LON and LAT from Instagram Explorer
-        url = 'https://www.instagram.com/explore/locations/'
-        url += '{},{}'.format(location, "?__a=1")
-        req = requests.get(url)
+        base_url = 'https://www.instagram.com/explore/locations/'
+        query_url = '{}{}{}'.format(base_url, location, "?__a=1")
+        req = requests.get(query_url)
         data = json.loads(req.text)
 
-        self.lat_ = data['graphql']['location']['lat']
-        self.lon_ = data['graphql']['location']['lng']
+        lat = data['graphql']['location']['lat']
+        lon = data['graphql']['location']['lng']
         # print(lat_, lon_)
+        
+        return lat, lon
 
     def get_bounding_box(self, latitude_in_degrees, longitude_in_degrees, half_side_in_miles):
         assert half_side_in_miles > 0
@@ -42,14 +38,20 @@ class Instapy(object):
         lat_max = lat + half_side_in_km / radius
         lon_min = lon - half_side_in_km / parallel_radius
         lon_max = lon + half_side_in_km / parallel_radius
-        rad2deg = math.degrees
 
-        self.lat_min = rad2deg(lat_min)
-        self.lon_min = rad2deg(lon_min)
-        self.lat_max = rad2deg(lat_max)
-        self.lon_max = rad2deg(lon_max)
+        lat_min = rad2deg(lat_min)
+        lon_min = rad2deg(lon_min)
+        lat_max = rad2deg(lat_max)
+        lon_max = rad2deg(lon_max)
+        
+        bbox = {
+            lat_min: lat_min,
+            lat_max: lat_max,
+            lon_min: lon_min,
+            lon_max: lon_max
+        }
 
-        return self
+        return bbox
 
     def set_smart_hashtags_map(self,
                                location,
@@ -58,13 +60,14 @@ class Instapy(object):
                                limit=3,
                                log_tags=True):
         """Generate smart hashtags based on https://displaypurposes.com/map"""
-        self.location_to_lonlat(location)
+        lat, lon = self.location_to_lonlat(location)
 
-        self.get_bounding_box(self.lat_, self.lon_, half_side_in_miles=miles)
+        bbox = self.get_bounding_box(lat, lon, half_side_in_miles=miles)
 
-        url = ' https://query.displaypurposes.com/local/?bbox='
-        url += '{},{},{},{}&zoom={}'.format(self.lon_min, self.lat_min, self.lon_max,
-                                            self.lat_max, zoom)
+        bbox_url = '{},{},{},{}&zoom={}'.format(bbox.lon_min, bbox.lat_min, bbox.lon_max,
+                                            bbox.lat_max, zoom)
+        url = '{}{}'.format('https://query.displaypurposes.com/local/?bbox=', bbox_url)
+        
         req = requests.get(url)
         data = json.loads(req.text)
         if int(data['count']) > 0:  # Get how many hashtags we got
