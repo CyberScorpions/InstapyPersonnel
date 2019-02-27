@@ -39,16 +39,17 @@ class Instapy(object):
         lon_min = lon - half_side_in_km / parallel_radius
         lon_max = lon + half_side_in_km / parallel_radius
 
+        rad2deg = math.degrees
         lat_min = rad2deg(lat_min)
         lon_min = rad2deg(lon_min)
         lat_max = rad2deg(lat_max)
         lon_max = rad2deg(lon_max)
         
         bbox = {
-            lat_min: lat_min,
-            lat_max: lat_max,
-            lon_min: lon_min,
-            lon_max: lon_max
+            "lat_min": lat_min,
+            "lat_max": lat_max,
+            "lon_min": lon_min,
+            "lon_max": lon_max
         }
 
         return bbox
@@ -64,8 +65,8 @@ class Instapy(object):
 
         bbox = self.get_bounding_box(lat, lon, half_side_in_miles=miles)
 
-        bbox_url = '{},{},{},{}&zoom={}'.format(bbox.lon_min, bbox.lat_min, bbox.lon_max,
-                                            bbox.lat_max, zoom)
+        bbox_url = '{},{},{},{}&zoom={}'.format(bbox['lon_min'], bbox['lat_min'], bbox['lon_max'],
+                                                bbox['lat_max'], zoom)
         url = '{}{}'.format('https://query.displaypurposes.com/local/?bbox=', bbox_url)
         
         req = requests.get(url)
